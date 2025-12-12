@@ -7,7 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 from database import init_db, update_stock, get_balance, STOCK_ITEMS, clear_stock
 
 # ТОКЕН ОТ @BotFather
-API_TOKEN = '8506162762:AAHxVj9uZ8mQDELwDLBKnFwa0RXsEMrhPoM'
+API_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="MarkdownV2"))
 dp = Dispatcher()
