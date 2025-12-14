@@ -31,13 +31,12 @@ class CalculatorStates(StatesGroup):
 
 def get_main_reply_keyboard():
     builder = ReplyKeyboardBuilder()
+    builder.button(text="Стоимость МЭН") # Убедитесь, что текст здесь...
     builder.button(text="+")
     builder.button(text="-")
     builder.button(text="Balance")
-    builder.button(text="Стоимость МЭН")
-    builder.adjust(2, 1, 1)
-    return builder.as_markup(resize_keyboard=True, is_persistent=True)
-
+    builder.adjust(1, 2, 1) # Сделаем кнопку МЭН первой и большой
+    return builder.as_markup(resize_keyboard=True)
 
 def get_countries_keyboard():
     builder = InlineKeyboardBuilder()
@@ -61,9 +60,10 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 # Обработчик кнопки "Стоимость МЭН"
 # Добавляем state="*", чтобы кнопка работала, даже если бот что-то ждет
-@dp.message(F.text == "Стоимость МЭН")
+@dp.message(lambda message: message.text and message.text.strip().lower() == "стоимость мэн")
 async def start_calculator(message: types.Message, state: FSMContext):
-    await state.clear()  # Очищаем старые данные перед новым расчетом
+    print("Лог: Кнопка нажата!") # Это появится в логах Railway
+    await state.clear()
     await state.set_state(CalculatorStates.choosing_country)
     await message.answer(
         "🌍 *Выберите страну доставки:*",
