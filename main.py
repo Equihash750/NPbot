@@ -85,11 +85,10 @@ async def process_country_choice(callback: types.CallbackQuery, state: FSMContex
     await state.set_state(CalculatorStates.entering_weight)
 
     await callback.message.edit_text(
-        f"📍 Страна: *{country_name.replace('.', '\\.')}*\n\n"
-        "Введите вес посылки в кг \(например: `0.5` или `1.2` \):"
+        f"📍 Страна: *{country_name.replace('.', r'\.')}*\n\n"
+        r"Введите вес посылки в кг (например: `0.5` или `1.2` ):"
     )
-    await callback.answer()
-
+    await callback.message.answer(r"Действие отменено.", reply_markup=get_main_reply_keyboard())
 
 # 3. Ввод веса (ждем сообщение от пользователя)
 @dp.message(CalculatorStates.entering_weight)
@@ -101,8 +100,7 @@ async def process_weight_input(message: types.Message, state: FSMContext):
         if weight <= 0:
             raise ValueError
     except ValueError:
-        await message.answer("❌ Ошибка\! Введите число больше нуля \(например: 0.5\)")
-        return
+        await message.answer(r"❌ Ошибка! Введите число больше нуля (например: 0.5)")        return
 
     # Получаем сохраненную страну
     user_data = await state.get_data()

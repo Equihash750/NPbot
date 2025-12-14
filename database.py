@@ -50,22 +50,25 @@ DELIVERY_TARIFFS = {
     "Іспанія 🇪🇸": {"up_to_01": 1050, "up_to_025": 1070, "up_to_05": 1100, "up_to_1": 1150, "next_kg": 45},
 }
 
+
 def calculate_delivery_cost(country_name, weight):
-    """Расчет стоимости на основе веса и тарифов таблицы."""
     rates = DELIVERY_TARIFFS.get(country_name)
     if not rates:
-        return None
+        return 0
 
     if weight <= 0.1:
-        return rates["up_to_01"]
+        cost = rates["up_to_01"]
     elif weight <= 0.25:
-        return rates["up_to_025"]
+        cost = rates["up_to_025"]
     elif weight <= 0.5:
-        return rates["up_to_05"]
+        cost = rates["up_to_05"]
     elif weight <= 1.0:
-        return rates["up_to_1"]
+        cost = rates["up_to_1"]
     else:
-        # Стоимость за 1 кг + (остаток веса * тариф за каждый след. кг)
-        # В таблице указано "+ цена за следующий 1 кг"
-        extra_weight = weight - 1.0
-        return rates["up_to_1"] + (extra_weight * rates["next_kg"])
+        # Базовая цена за 1 кг + цена за каждый кг свыше 1 кг
+        # Округляем остаток веса вверх до целого числа кг
+        import math
+        extra_kg = math.ceil(weight - 1.0)
+        cost = rates["up_to_1"] + (extra_kg * rates["next_kg"])
+
+    return cost
