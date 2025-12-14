@@ -5,10 +5,9 @@ from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.client.default import DefaultBotProperties
 
-# Импортируем функции из вашего файла database.py
 from database import init_db, update_stock, get_balance, STOCK_ITEMS, clear_stock
 
-# ТОКЕН ОТ @BotFather (убедитесь, что переменная окружения установлена)
+# ТОКЕН ОТ @BotFather
 API_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="MarkdownV2"))
@@ -18,7 +17,7 @@ dp = Dispatcher()
 # --- КЛАВИАТУРЫ ---
 
 def get_main_reply_keyboard():
-    """Главное меню (нижние кнопки)."""
+    """Нижнее меню управления: +, -, Balance."""
     builder = ReplyKeyboardBuilder()
     builder.button(text="+")
     builder.button(text="-")
@@ -28,7 +27,7 @@ def get_main_reply_keyboard():
 
 
 def get_items_inline_keyboard(mode):
-    """Меню выбора товара (инлайн-кнопки)."""
+    """Сетка кнопок выбора товара (по 4 в ряд)."""
     builder = InlineKeyboardBuilder()
     sign = "+" if mode == 'add' else "−"
     for item in STOCK_ITEMS:
@@ -60,6 +59,7 @@ async def cmd_start(message: types.Message):
 @dp.message(F.text == "Balance")
 async def show_balance(message: types.Message):
     data = get_balance()
+    # Экранируем спецсимволы для MarkdownV2 внутри блока кода (```)
     table = "📊 *Текущий баланс*\n\n"
     table += "```\n"
     table += f"{'Товар':<8} | {'Кол-во':>5}\n"
@@ -67,7 +67,7 @@ async def show_balance(message: types.Message):
     for name, qty in data:
         table += f"{name:<8} | {qty:>5}\n"
     table += "```"
-    await message.answer(table, reply_markup=get_main_reply_keyboard())
+    await message.answer(table)
 
 
 @dp.message(F.text.in_({"+", "-"}))
@@ -85,31 +85,25 @@ async def process_item(callback: types.CallbackQuery):
     _, mode, item_name = callback.data.split(":")
     amount = 1 if mode == "add" else -1
 
-    # Обновляем БД и получаем новый остаток
     new_qty = update_stock(item_name, amount)
 
-    # Подготовка текста уведомления
+    # 1. Всплывающее уведомление (сверху)
     res_text = "Добавлено" if amount > 0 else "Списано"
     alert_text = f"✅ {res_text}: {item_name}"
 
     if mode == "subtract" and new_qty < 0:
-        alert_text = "⚠️ Внимание! Остаток отрицательный!"
+        alert_text = "⚠️ Внимание: ушли в минус!"
 
-    # 1. Показываем короткое всплывающее уведомление
-    await callback.answer(alert_text)
+    await callback.answer(alert_text, show_alert=False)  # show_alert=True сделает окно с кнопкой OK
 
-    # 2. Удаляем инлайн-кнопки, чтобы не засорять чат и избежать повторных нажатий
+    # 2. Удаляем инлайн-меню и отправляем новое сообщение с подтверждением
     await callback.message.delete()
 
-    # 3. Отправляем новое сообщение с подтверждением и возвращаем Reply-клавиатуру
-    # Экранируем точку для MarkdownV2
-    safe_item_name = item_name.replace(".", "\\.")
     await callback.message.answer(
-        f"✅ *Успешно обновлено*\n\n"
-        f"Товар: `{safe_item_name}`\n"
-        f"Изменение: *{'+' if amount > 0 else ''}{amount} шт\\.*\n"
-        f"Текущий баланс: *{new_qty}*",
-        reply_markup=get_main_reply_keyboard()
+        f"✅ Обновлено: *{item_name}*\n"
+        f"Действие: *{'+' if amount > 0 else ''}{amount} шт.*\n"
+        f"Текущий остаток: *{new_qty}*",
+        reply_markup=get_main_reply_keyboard()  # Теперь это сработает, так как это новое сообщение
     )
 
 
@@ -130,8 +124,7 @@ async def process_reset(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "action:cancel")
 async def process_cancel(callback: types.CallbackQuery):
-    await callback.message.delete()
-    await callback.message.answer("Действие отменено\\.", reply_markup=get_main_reply_keyboard())
+    await callback.message.edit_text("Действие отменено\\.")
     await callback.answer()
 
 
