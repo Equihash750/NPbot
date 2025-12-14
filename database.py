@@ -40,32 +40,3 @@ def clear_stock():
     cursor.execute('UPDATE inventory SET quantity = 0')
     conn.commit()
     conn.close()
-
-# Данные тарифов из таблицы
-DELIVERY_TARIFFS = {
-    "pl": {"name": "Польща 🇵🇱", "up_to_01": 330, "up_to_025": 350, "up_to_05": 370, "up_to_1": 400, "next_kg": 20},
-    "ca": {"name": "Канада 🇨🇦", "up_to_01": 450, "up_to_025": 500, "up_to_05": 700, "up_to_1": 1000, "next_kg": 280},
-    "eu_central": {"name": "Чехія/Литва/Німеччина 🇪🇺", "up_to_01": 480, "up_to_025": 500, "up_to_05": 520, "up_to_1": 550, "next_kg": 45},
-    "eu_west": {"name": "Італія/Франція/Британія 🌍", "up_to_01": 880, "up_to_025": 900, "up_to_05": 920, "up_to_1": 950, "next_kg": 55},
-    "es": {"name": "Іспанія 🇪🇸", "up_to_01": 1050, "up_to_025": 1070, "up_to_05": 1100, "up_to_1": 1150, "next_kg": 45},
-}
-
-
-def calculate_delivery_cost(country_code, weight):
-    rates = DELIVERY_TARIFFS.get(country_code)
-    if not rates:
-        return 0
-
-    if weight <= 0.1:
-        cost = rates["up_to_01"]
-    elif weight <= 0.25:
-        cost = rates["up_to_025"]
-    elif weight <= 0.5:
-        cost = rates["up_to_05"]
-    elif weight <= 1.0:
-        cost = rates["up_to_1"]
-    else:
-        import math
-        extra_kg = math.ceil(weight - 1.0)
-        cost = rates["up_to_1"] + (extra_kg * rates["next_kg"])
-    return cost
