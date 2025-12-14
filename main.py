@@ -40,8 +40,9 @@ def get_main_reply_keyboard():
 
 def get_countries_keyboard():
     builder = InlineKeyboardBuilder()
-    for country in DELIVERY_TARIFFS.keys():
-        builder.button(text=country, callback_data=f"calc:{country}")
+    for code, data in DELIVERY_TARIFFS.items():
+        # Текст на кнопке длинный, но callback_data короткий (например, calc:eu_central)
+        builder.button(text=data["name"], callback_data=f"calc:{code}")
     builder.button(text="🔙 Отмена", callback_data="action:cancel")
     builder.adjust(1)
     return builder.as_markup()
@@ -73,15 +74,15 @@ async def start_calculator(message: types.Message, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("calc:"))
 async def process_country_choice(callback: types.CallbackQuery, state: FSMContext):
-    country_name = callback.data.split(":")[1]
-    await state.update_data(selected_country=country_name)
+    country_code = callback.data.split(":")[1]
+    country_full_name = DELIVERY_TARIFFS[country_code]["name"]  # Получаем красивое имя
+
+    await state.update_data(selected_country_code=country_code)  # Сохраняем КОД
     await state.set_state(CalculatorStates.entering_weight)
 
-    # Экранируем спецсимволы для MarkdownV2
-    safe_name = country_name.replace(".", r"\.")
     await callback.message.edit_text(
-        f"📍 Страна: *{safe_name}*\n\n"
-        r"Введите вес посылки в кг (например: `0.5` или `1.2` ):"
+        f"📍 Выбрано: *{country_full_name.replace('.', r'\.')}*\n\n"
+        "Введите вес посылки в кг (например: `0.5` или `1.2`):"
     )
     await callback.answer()
 
@@ -93,18 +94,19 @@ async def process_weight_input(message: types.Message, state: FSMContext):
         weight = float(weight_str)
         if weight <= 0: raise ValueError
     except ValueError:
-        await message.answer(r"❌ Ошибка! Введите число больше нуля (например: 0.5)")
+        await message.answer(r"❌ Ошибка! Введите число (например: 0.5)")
         return
 
     user_data = await state.get_data()
-    country = user_data.get('selected_country')
-    cost = calculate_delivery_cost(country, weight)
+    code = user_data.get('selected_country_code')
+    country_name = DELIVERY_TARIFFS[code]["name"]  # Для вывода в сообщении
 
-    safe_country = str(country).replace(".", r"\.").replace("-", r"\-")
+    cost = calculate_delivery_cost(code, weight)
 
+    safe_name = country_name.replace(".", r"\.").replace("-", r"\-")
     await message.answer(
         f"📊 *Результат расчета*\n\n"
-        f"🏳️ Страна: *{safe_country}*\n"
+        f"🏳️ Страна: *{safe_name}*\n"
         f"⚖️ Вес: *{weight} кг*\n"
         f"💰 Стоимость: *{cost} грн*",
         reply_markup=get_main_reply_keyboard()
