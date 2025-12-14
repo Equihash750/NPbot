@@ -93,24 +93,25 @@ async def process_country_choice(callback: types.CallbackQuery, state: FSMContex
 # 3. Ввод веса (ждем сообщение от пользователя)
 @dp.message(CalculatorStates.entering_weight)
 async def process_weight_input(message: types.Message, state: FSMContext):
-    weight_str = message.text.replace(",", ".")  # Заменяем запятую на точку
+    weight_str = message.text.replace(",", ".")
 
     try:
         weight = float(weight_str)
         if weight <= 0:
             raise ValueError
     except ValueError:
-        await message.answer(r"❌ Ошибка! Введите число больше нуля (например: 0.5)")        return
+        # Здесь была ошибка. Теперь return на новой строке:
+        await message.answer(r"❌ Ошибка! Введите число больше нуля (например: 0.5)")
+        return
 
-    # Получаем сохраненную страну
     user_data = await state.get_data()
     country = user_data.get('selected_country')
 
-    # Считаем стоимость
+    # Считаем стоимость через функцию из database.py
     cost = calculate_delivery_cost(country, weight)
 
     # Экранируем спецсимволы для MarkdownV2
-    safe_country = country.replace(".", "\\.").replace("-", "\\-")
+    safe_country = country.replace(".", r"\.").replace("-", r"\-")
 
     await message.answer(
         f"📊 *Результат расчета*\n\n"
@@ -119,8 +120,7 @@ async def process_weight_input(message: types.Message, state: FSMContext):
         f"💰 Стоимость: *{cost} грн*",
         reply_markup=get_main_reply_keyboard()
     )
-    await state.clear()  # Очищаем состояние после расчета
-
+    await state.clear()
 
 # --- ОБРАБОТЧИКИ СКЛАДА ---
 
